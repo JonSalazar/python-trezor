@@ -1,3 +1,4 @@
 [submodule "vendor/trezor-common"]
 	path = vendor/trezor-common
-	url = https://github.com/trezor/trezor-common.git
+	url = https://github.com/JonSalazar/trezor-common.git
+	branch = master
