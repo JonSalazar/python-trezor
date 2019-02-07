@@ -1821,6 +1821,34 @@ def ontology_sign_ont_id_add_attributes(
 
     return output
 
+@cli.command(help="Sign transaction input using address of given path.")
+@click.option("-c", "--coin", default="Bitcoin")
+@click.option(
+    "-n", "--address", required=True, help="BIP-32 path, e.g. m/44'/0'/0'/0/0"
+)
+@click.option(
+    "-t",
+    "--script-type",
+    type=click.Choice(["address", "segwit", "p2shsegwit"]),
+    default="address",
+)
+@click.argument("tx_input")
+@click.pass_obj
+def sign_tx_input(connect, coin, address, tx_input, script_type):
+    client = connect()
+    address_n = tools.parse_path(address)
+    typemap = {
+        "address": proto.InputScriptType.SPENDADDRESS,
+        "segwit": proto.InputScriptType.SPENDWITNESS,
+        "p2shsegwit": proto.InputScriptType.SPENDP2SHWITNESS,
+    }
+    script_type = typemap[script_type]
+    res = btc.sign_tx_input(client, coin, address_n, tx_input, script_type)
+    return {
+        "tx_input": tx_input,
+        "address": res.address,
+        "signature": base64.b64encode(res.signature),
+    }
 
 #
 # Main

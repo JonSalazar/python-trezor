@@ -192,3 +192,14 @@ def sign_tx(client, coin_name, inputs, outputs, details=None, prev_txes=None):
         raise RuntimeError("Some signatures are missing!")
 
     return signatures, serialized_tx
+
+@expect(messages.MessageSignature)
+def sign_tx_input(
+    client, coin_name, n, tx_input, script_type=messages.InputScriptType.SPENDADDRESS
+):
+    tx_input = normalize_nfc(tx_input)
+    return client.call(
+        messages.SignTxInput(
+            coin_name=coin_name, address_n=n, tx_input=tx_input, script_type=script_type
+        )
+    )
