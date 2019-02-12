@@ -1821,11 +1821,121 @@ def ontology_sign_ont_id_add_attributes(
 
     return output
 
+@cli.command(help="test sign transaction with stakene help")
+@click.pass_obj
+def test_signtx(connect):
+    client = connect()
+    coin = "Stakenet"
+    # (address, segwit, p2shsegwit)
+    address_type_input = "address"
+    address_type_output = "address"
+    transaction_id_n = "483bdb594fe347052cb56c60000fba593ef7dee8bf3f069e616fbdf8353e38ae:0"
+    path_bip32 = "m/44'/0'/0'/0/1'"
+    address_output = "Xj5mEprwQpNYBFTWeuHabNyJB8CDTWZ6Vw"
+    amount_to_send = 1
 
-#
+    coin_data = coins.by_name[coin]
+    txapi = coins.tx_api[coin]
+
+    def outpoint(s):
+        txid, vout = s.split(":")
+        return bytes.fromhex(txid), int(vout)
+
+    inputs = []
+    txes = {}
+
+    click.echo()
+    prev = outpoint(transaction_id_n)
+    prev_hash, prev_index = prev
+    address_n = tools.parse_path(path_bip32)
+    try:
+        tx = txapi[prev_hash]
+        txes[prev_hash] = tx
+        amount = tx.bin_outputs[prev_index].amount
+        click.echo("Prefilling input amount: {}".format(amount))
+    except Exception as e:
+        print(e)
+        click.echo("Failed to fetch transation. This might bite you later.")
+        amount = click.prompt("Input amount (satoshis)", type=int, default=0)
+    sequence = 0xFFFFFFFD
+    script_type = address_type_input
+    script_type = (
+        script_type
+        if isinstance(script_type, int)
+        else CHOICE_INPUT_SCRIPT_TYPE.typemap[script_type]
+    )
+
+    new_input = proto.TxInputType(
+        address_n=address_n,
+        prev_hash=prev_hash,
+        prev_index=prev_index,
+        amount=amount,
+        script_type=script_type,
+        sequence=sequence,
+    )
+    if coin_data["bip115"]:
+        prev_output = txapi.get_tx(prev_hash.hex()).bin_outputs[prev_index]
+        new_input.prev_block_hash_bip115 = prev_output.block_hash
+        new_input.prev_block_height_bip115 = prev_output.block_height
+
+    inputs.append(new_input)
+
+
+    if coin_data["bip115"]:
+        current_block_height = txapi.current_height()
+        # Zencash recommendation for the better protection
+        block_height = current_block_height - 300
+        block_hash = txapi.get_block_hash(block_height)
+        # Blockhash passed in reverse order
+        block_hash = block_hash[::-1]
+    else:
+        block_height = None
+        block_hash = None
+
+    outputs = []
+
+    click.echo()
+    address = address_output
+    address_n = None
+
+    amount = amount_to_send
+    script_type = address_type_output
+    script_type = (
+        script_type
+        if isinstance(script_type, int)
+        else CHOICE_OUTPUT_SCRIPT_TYPE.typemap[script_type]
+    )
+    outputs.append(
+        proto.TxOutputType(
+            address_n=address_n,
+            address=address,
+            amount=amount,
+            script_type=script_type,
+            block_hash_bip115=block_hash,
+            block_height_bip115=block_height,
+        )
+    )
+
+    signtx = proto.SignTx()
+    signtx.version = 2
+    signtx.lock_time = 0
+
+    _, serialized_tx = btc.sign_tx(
+        client, coin, inputs, outputs, details=signtx, prev_txes=txes
+    )
+
+    client.close()
+
+    click.echo()
+    click.echo("Signed Transaction:")
+    click.echo(serialized_tx.hex())
+    click.echo()
+    click.echo("Use the following form to broadcast it to the network:")
+    click.echo(txapi.pushtx_url)
+
+
 # Main
 #
-
 
 if __name__ == "__main__":
     cli()  # pylint: disable=E1120
