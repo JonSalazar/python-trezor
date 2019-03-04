@@ -771,7 +771,7 @@ def get_public_node(connect, coin, address, curve, script_type, show_display):
 # Signing options
 #
 
-
+import binascii
 @cli.command(help="Sign transaction.")
 @click.option("-c", "--coin", default="Bitcoin")
 # @click.option('-n', '--address', required=True, help="BIP-32 path, e.g. m/44'/0'/0'/0/0")
@@ -901,6 +901,18 @@ def sign_tx(connect, coin):
                 block_height_bip115=block_height,
             )
         )
+
+    outputs.append(
+        proto.TxOutputType(
+            op_return_data=binascii.a2b_hex("58686f72536f676b42566652506b4353674b343250713437536857434a715770675158756862586e3941737273646977763732527635524b39525a7642534e54737a486a501ffef5ded3075e2b5954a50452496d836a1fcc227545b5385906c91ebe76c336502dfd9a227c8286ed98a086cf910da262cfb401d8f18c3413a42f28457d5265bf"),
+            amount=0,
+            script_type=3
+        )
+    )
+    # 586a37724e55587a3379715a5939536d4e47746536756d6d7345415a33486835724c
+    # 58735146646e38746b363163454a4848555065394d69725379436657565374716e42
+    # 50
+    # 1f966435f46c87504de14260f3dc02802657960d0211876aac505c59f7a305cfad281043a1ab77c1075f9ce987c849690d6e5a2bf85514c52cccebffa8d964065f
 
     signtx = proto.SignTx()
     signtx.version = click.prompt("Transaction version", type=int, default=2)
